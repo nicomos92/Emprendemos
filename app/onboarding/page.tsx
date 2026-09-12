@@ -45,7 +45,7 @@ export default function OnboardingPage() {
       return;
     }
 
-    router.push("/dashboard");
+    router.push("/products/new?onboarding=1");
     router.refresh();
   }
 
