@@ -5,10 +5,10 @@ import { getOrder } from "@/lib/actions/orders";
 import { AppShell } from "@/components/layout/AppShell";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
 import { formatCurrency } from "@/lib/pricing";
 import { ORDER_STATUS_LABELS, ORDER_STATUS_VARIANTS } from "@/lib/order-status";
 import { OrderStatusActions } from "@/app/orders/[id]/OrderStatusActions";
+import { RegisterPaymentButton } from "@/app/orders/[id]/RegisterPaymentButton";
 
 interface OrderPageProps {
   params: Promise<{ id: string }>;
@@ -143,10 +143,7 @@ export default async function OrderDetailPage({ params }: OrderPageProps) {
             </div>
           </div>
           <div className="mt-4">
-            <Button variant="secondary" className="w-full" disabled title="Disponible próximamente">
-              Registrar cobro
-            </Button>
-            <p className="mt-1 text-xs text-neutral-500">Disponible próximamente.</p>
+            <RegisterPaymentButton orderId={order.id} pendingToCollect={pendingToCollect} />
           </div>
         </Card>
 
