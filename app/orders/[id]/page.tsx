@@ -1,21 +1,20 @@
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getQuote } from "@/lib/actions/quotes";
+import { getOrder } from "@/lib/actions/orders";
 import { AppShell } from "@/components/layout/AppShell";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { formatCurrency } from "@/lib/pricing";
-import { QUOTE_STATUS_LABELS, QUOTE_STATUS_VARIANTS } from "@/lib/quote-status";
-import { QuoteStatusActions } from "@/app/quotes/[id]/QuoteStatusActions";
-import { DeleteQuoteButton } from "@/app/quotes/[id]/DeleteQuoteButton";
-import { ConvertToOrderButton } from "@/app/quotes/[id]/ConvertToOrderButton";
+import { ORDER_STATUS_LABELS, ORDER_STATUS_VARIANTS } from "@/lib/order-status";
+import { OrderStatusActions } from "@/app/orders/[id]/OrderStatusActions";
 
-interface QuotePageProps {
+interface OrderPageProps {
   params: Promise<{ id: string }>;
 }
 
-export default async function QuoteDetailPage({ params }: QuotePageProps) {
+export default async function OrderDetailPage({ params }: OrderPageProps) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -26,13 +25,13 @@ export default async function QuoteDetailPage({ params }: QuotePageProps) {
   }
 
   const { id } = await params;
-  const details = await getQuote(id);
+  const details = await getOrder(id);
 
   if (!details) {
     notFound();
   }
 
-  const { quote, customer, items } = details;
+  const { order, customer, items, totalPaid, pendingToCollect } = details;
 
   return (
     <AppShell>
@@ -40,20 +39,21 @@ export default async function QuoteDetailPage({ params }: QuotePageProps) {
         <Card className="flex flex-col gap-4">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h1 className="text-xl font-semibold text-neutral-700">
-                Presupuesto N° {quote.number ?? "-"}
-              </h1>
+              <h1 className="text-xl font-semibold text-neutral-700">Pedido</h1>
               <p className="mt-1 text-sm text-neutral-500">
-                Creado el {new Date(quote.created_at).toLocaleDateString("es-AR")}
+                Creado el {new Date(order.created_at).toLocaleDateString("es-AR")}
               </p>
-              {quote.valid_until && (
+              {order.quote_id && (
                 <p className="text-sm text-neutral-500">
-                  Válido hasta {new Date(quote.valid_until).toLocaleDateString("es-AR")}
+                  Viene del{" "}
+                  <Link href={`/quotes/${order.quote_id}`} className="text-primary-600 hover:underline">
+                    presupuesto
+                  </Link>
                 </p>
               )}
             </div>
-            <Badge variant={QUOTE_STATUS_VARIANTS[quote.status]}>
-              {QUOTE_STATUS_LABELS[quote.status]}
+            <Badge variant={ORDER_STATUS_VARIANTS[order.status]}>
+              {ORDER_STATUS_LABELS[order.status]}
             </Badge>
           </div>
 
@@ -110,41 +110,49 @@ export default async function QuoteDetailPage({ params }: QuotePageProps) {
           <div className="mt-4 border-t border-neutral-100 pt-4">
             <div className="flex justify-between text-sm text-neutral-600">
               <span>Subtotal</span>
-              <span>{formatCurrency(quote.subtotal)}</span>
+              <span>{formatCurrency(order.subtotal)}</span>
             </div>
             <div className="mt-1 flex justify-between text-sm text-neutral-600">
               <span>Descuento</span>
-              <span>-{formatCurrency(quote.discount)}</span>
+              <span>-{formatCurrency(order.discount)}</span>
             </div>
             <div className="mt-2 flex justify-between text-base font-semibold text-neutral-700">
               <span>Total</span>
-              <span>{formatCurrency(quote.total)}</span>
+              <span>{formatCurrency(order.total)}</span>
             </div>
           </div>
 
-          {quote.notes && (
+          {order.notes && (
             <div className="mt-4">
               <p className="text-xs font-medium uppercase text-neutral-500">Notas</p>
-              <p className="mt-1 text-sm text-neutral-700">{quote.notes}</p>
+              <p className="mt-1 text-sm text-neutral-700">{order.notes}</p>
             </div>
           )}
         </Card>
 
-        <Card className="flex flex-col gap-3">
-          <QuoteStatusActions quoteId={quote.id} status={quote.status} />
-
-          <a href={`/quotes/${quote.id}/pdf`} target="_blank" rel="noreferrer">
-            <Button variant="secondary" className="w-full">
-              Descargar PDF
+        <Card>
+          <h2 className="text-sm font-semibold text-neutral-700">Cobro</h2>
+          <div className="mt-3">
+            <div className="flex justify-between text-sm text-neutral-600">
+              <span>Total pagado</span>
+              <span>{formatCurrency(totalPaid)}</span>
+            </div>
+            <div className="mt-1 flex justify-between text-base font-semibold text-neutral-700">
+              <span>Pendiente de cobrar</span>
+              <span>{formatCurrency(pendingToCollect)}</span>
+            </div>
+          </div>
+          <div className="mt-4">
+            <Button variant="secondary" className="w-full" disabled title="Disponible próximamente">
+              Registrar cobro
             </Button>
-          </a>
-
-          {quote.status === "accepted" && <ConvertToOrderButton quoteId={quote.id} />}
+            <p className="mt-1 text-xs text-neutral-500">Disponible próximamente.</p>
+          </div>
         </Card>
 
-        {quote.status === "draft" && (
-          <DeleteQuoteButton quoteId={quote.id} quoteNumber={quote.number} />
-        )}
+        <Card>
+          <OrderStatusActions orderId={order.id} status={order.status} />
+        </Card>
       </div>
     </AppShell>
   );
