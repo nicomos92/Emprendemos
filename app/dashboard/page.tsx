@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 import { CatalogLinkCard } from "@/components/CatalogLinkCard";
+import { DemoDataCard } from "@/components/DemoDataCard";
 import { formatCurrency } from "@/lib/pricing";
 
 interface DashboardPageProps {
@@ -94,6 +95,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <StatCard label="Productos" value={String(summary.productsCount)} />
           </div>
+          {!summary.hasAnyProducts && <DemoDataCard />}
         </>
       ) : (
         <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
