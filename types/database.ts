@@ -35,6 +35,7 @@ export interface Database {
           phone: string | null;
           whatsapp: string | null;
           email: string | null;
+          sells_what: string | null;
           created_at: string;
         };
         Insert: {
@@ -46,6 +47,7 @@ export interface Database {
           phone?: string | null;
           whatsapp?: string | null;
           email?: string | null;
+          sells_what?: string | null;
           created_at?: string;
         };
         Update: {
@@ -57,6 +59,7 @@ export interface Database {
           phone?: string | null;
           whatsapp?: string | null;
           email?: string | null;
+          sells_what?: string | null;
           created_at?: string;
         };
         Relationships: [];
