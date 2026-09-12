@@ -51,7 +51,7 @@ export interface NavLink {
 export const NAV_LINKS: NavLink[] = [
   { href: "/", label: "Inicio", icon: HomeIcon },
   { href: "/products", label: "Productos", icon: BoxIcon },
-  { href: "/ventas", label: "Ventas", icon: CartIcon },
+  { href: "/orders", label: "Ventas", icon: CartIcon },
   { href: "/customers", label: "Clientes", icon: UsersIcon },
   { href: "/cash", label: "Caja", icon: CashIcon },
 ];

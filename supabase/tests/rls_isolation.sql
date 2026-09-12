@@ -14,7 +14,9 @@
 -- Pattern used: Supabase's local RLS testing convention of impersonating an
 -- authenticated user by setting the `authenticated` role and a fake JWT
 -- claims payload for the current transaction, then asserting what that
--- session can and cannot see.
+-- session can and cannot see, and — critically — that it cannot write or
+-- reassign rows into a foreign business_id (the "with check" clauses from
+-- 0002_rls.sql).
 
 begin;
 
@@ -48,6 +50,7 @@ do $$
 declare
   own_count integer;
   other_count integer;
+  spoof_rejected boolean := false;
 begin
   select count(*) into own_count from products where business_id = 'a1111111-1111-1111-1111-111111111111';
   select count(*) into other_count from products where business_id = 'b1111111-1111-1111-1111-111111111111';
@@ -57,6 +60,40 @@ begin
 
   select count(*) into other_count from businesses where id = 'b1111111-1111-1111-1111-111111111111';
   assert other_count = 0, 'user A must NOT see business B row';
+
+  -- Direct write attempt: user A tries to write a row under business B.
+  -- The "with check" clause on products_insert_own must reject this.
+  begin
+    insert into products (id, business_id, name, sale_price)
+    values ('c3333333-3333-3333-3333-333333333333', 'b1111111-1111-1111-1111-111111111111', 'Hacked product', 1);
+    spoof_rejected := false;
+  exception
+    when insufficient_privilege or others then
+      spoof_rejected := true;
+  end;
+  assert spoof_rejected, 'user A must NOT be able to insert a row with a foreign business_id';
+
+  -- Manual business_id manipulation: user A tries to reassign their own
+  -- product to business B via update. The "with check" clause on
+  -- products_update_own must reject this too.
+  spoof_rejected := false;
+  begin
+    update products
+    set business_id = 'b1111111-1111-1111-1111-111111111111'
+    where id = 'a2222222-2222-2222-2222-222222222222';
+    spoof_rejected := false;
+  exception
+    when insufficient_privilege or others then
+      spoof_rejected := true;
+  end;
+  assert spoof_rejected, 'user A must NOT be able to move their product into business B via update';
+
+  -- Confirm the product still belongs to business A (the update above,
+  -- if it raised, must not have partially applied).
+  select count(*) into own_count from products
+    where id = 'a2222222-2222-2222-2222-222222222222'
+      and business_id = 'a1111111-1111-1111-1111-111111111111';
+  assert own_count = 1, 'product A must remain under business A after the rejected spoof attempt';
 end $$;
 
 -- Reset role before switching identities.
