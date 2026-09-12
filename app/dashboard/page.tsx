@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { getDashboardSummary } from "@/lib/actions/dashboard";
 import { AppShell } from "@/components/layout/AppShell";
@@ -8,6 +9,7 @@ import { StatCard } from "@/components/ui/StatCard";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
+import { CatalogLinkCard } from "@/components/CatalogLinkCard";
 import { formatCurrency } from "@/lib/pricing";
 
 interface DashboardPageProps {
@@ -40,15 +42,25 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     .maybeSingle();
 
   let businessName = "tu negocio";
+  let catalogUrl: string | null = null;
   const summary = await getDashboardSummary();
 
   if (profile?.business_id) {
     const { data: business } = await supabase
       .from("businesses")
-      .select("name")
+      .select("name, slug")
       .eq("id", profile.business_id)
       .maybeSingle();
     businessName = business?.name ?? businessName;
+
+    if (business?.slug) {
+      const headersList = await headers();
+      const origin = headersList.get("origin");
+      const host = headersList.get("host");
+      const protocol = headersList.get("x-forwarded-proto") ?? "https";
+      const base = origin ?? (host ? `${protocol}://${host}` : "");
+      catalogUrl = `${base}/catalogo/${business.slug}`;
+    }
   }
 
   return (
@@ -57,6 +69,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         title="¡Bienvenido a EmprendeMos!"
         description={`Este es el panel de ${businessName}.`}
       />
+
+      {catalogUrl && <CatalogLinkCard catalogUrl={catalogUrl} />}
 
       {welcome === "1" && (
         <div className="mt-4 rounded-xl border border-success-100 bg-success-100/40 p-4 text-sm text-success-700">
