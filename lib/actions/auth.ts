@@ -152,23 +152,25 @@ export async function createBusiness(
   let businessId: string | null = null;
   let lastError: string | null = null;
 
+  // Insert with a client-generated id and no post-insert `.select()`: right
+  // after this insert the caller has no profile yet, so current_business_id()
+  // is still null and the businesses_select_own RLS policy would block a
+  // `.select()` read-back even though the insert itself succeeded.
   for (let attempt = 0; attempt < 2; attempt++) {
-    const { data, error } = await supabase
-      .from("businesses")
-      .insert({
-        name: parsed.data.name,
-        slug: generateSlug(parsed.data.name),
-        sells_what: parsed.data.sellsWhat,
-      })
-      .select("id")
-      .single();
+    const candidateId = crypto.randomUUID();
+    const { error } = await supabase.from("businesses").insert({
+      id: candidateId,
+      name: parsed.data.name,
+      slug: generateSlug(parsed.data.name),
+      sells_what: parsed.data.sellsWhat,
+    });
 
-    if (!error && data) {
-      businessId = data.id;
+    if (!error) {
+      businessId = candidateId;
       break;
     }
 
-    lastError = error?.message ?? "unknown error";
+    lastError = error.message;
     // Retry once in case of a slug collision; otherwise stop.
     if (!lastError.toLowerCase().includes("slug")) {
       break;
