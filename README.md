@@ -74,6 +74,25 @@ psql "$(npx supabase status -o json | node -e "process.stdin.once('data',d=>cons
 
 (o directamente `psql postgresql://postgres:postgres@127.0.0.1:54322/postgres -f supabase/tests/rls_isolation.sql`)
 
+Si no tenés `psql` a mano, contra un proyecto remoto ya enlazado (`npx supabase link --project-ref <ref>`) también funciona:
+
+```bash
+SUPABASE_ACCESS_TOKEN=<tu access token de supabase.com/dashboard/account/tokens> \
+SUPABASE_DB_PASSWORD=<contraseña de la base> \
+npx supabase db query --linked -f supabase/tests/rls_isolation.sql
+```
+
+Este test se corrió y pasó contra el proyecto de producción antes del lanzamiento inicial.
+
+## Limpieza de datos antes de salir a producción
+
+`supabase/scripts/` tiene dos scripts para dejar la base limpia antes de que entren usuarios reales, corridos igual que el test de arriba (`npx supabase db query --linked -f <script>`):
+
+- `cleanup_test_data.sql` — borra puntualmente el tenant de prueba usado durante el desarrollo (negocio y usuario de QA específicos), sin tocar nada más.
+- `reset_all_data.sql` — reset total: borra **todos** los negocios, perfiles y usuarios de Auth. Tiene una guarda (`select 1/0`) que hay que borrar a mano después de revisar el preview de conteos, para que no se pueda ejecutar por accidente con un `-f` descuidado.
+
+Ninguno de los dos toca el schema, las migraciones ni las políticas de RLS — solo datos.
+
 ## Estructura del proyecto
 
 - `app/` — rutas de Next.js (App Router): páginas, layouts, server actions expuestas por ruta.
